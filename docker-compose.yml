@@ -1,0 +1,15 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: storefront
+    ports:
+      # Use 3307 on host if another MySQL already binds 3306 (common on dev machines).
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+volumes:
+  mysql_data:

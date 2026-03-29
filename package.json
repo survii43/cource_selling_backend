@@ -1,0 +1,12 @@
+{
+  "name": "cource-selling-backend",
+  "private": true,
+  "version": "0.1.0",
+  "engines": { "node": ">=20" },
+  "workspaces": ["services/*"],
+  "scripts": {
+    "dev": "concurrently -n gw,auth,cat,ord,crs -c blue,green,yellow,magenta,cyan \"npm run dev -w @cource-selling/gateway\" \"npm run dev -w @cource-selling/auth\" \"npm run dev -w @cource-selling/catalog\" \"npm run dev -w @cource-selling/orders\" \"npm run dev -w @cource-selling/courses\"",
+    "start": "npm run start --workspaces --if-present"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" }
+}
