@@ -13,13 +13,66 @@ const targets = {
   orders: process.env.ORDERS_URL || 'http://127.0.0.1:3003',
   courses: process.env.COURSES_URL || 'http://127.0.0.1:3004',
 };
-app.use(helmet());
+// Allow Flutter web (different localhost port) to call this API; default Helmet
+// sets Cross-Origin-Resource-Policy: same-origin and breaks browser fetch().
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
+// CORS before compression so OPTIONS preflight finishes quickly (avoids "pending" in Chrome).
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 204,
+    maxAge: 86400,
+  }),
+);
 app.use(compression());
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: '1mb' }));
 app.get('/health', (_req, res) => { res.json({ status: 'ok', service: 'gateway', routes: targets }); });
-app.use('/auth', createProxyMiddleware({ target: targets.auth, changeOrigin: true, pathRewrite: { '^/auth': '' } }));
-app.use('/catalog', createProxyMiddleware({ target: targets.catalog, changeOrigin: true, pathRewrite: { '^/catalog': '' } }));
-app.use('/orders', createProxyMiddleware({ target: targets.orders, changeOrigin: true, pathRewrite: { '^/orders': '' } }));
-app.use('/courses', createProxyMiddleware({ target: targets.courses, changeOrigin: true, pathRewrite: { '^/courses': '' } }));
-app.listen(port, () => { console.log('[gateway] http://localhost:' + port); });
+
+const proxyCommon = {
+  changeOrigin: true,
+  timeout: 30_000,
+  proxyTimeout: 30_000,
+};
+
+app.use(
+  '/auth',
+  createProxyMiddleware({
+    target: targets.auth,
+    pathRewrite: { '^/auth': '' },
+    ...proxyCommon,
+  }),
+);
+app.use(
+  '/catalog',
+  createProxyMiddleware({
+    target: targets.catalog,
+    pathRewrite: { '^/catalog': '' },
+    ...proxyCommon,
+  }),
+);
+app.use(
+  '/orders',
+  createProxyMiddleware({
+    target: targets.orders,
+    pathRewrite: { '^/orders': '' },
+    ...proxyCommon,
+  }),
+);
+app.use(
+  '/courses',
+  createProxyMiddleware({
+    target: targets.courses,
+    pathRewrite: { '^/courses': '' },
+    ...proxyCommon,
+  }),
+);
+
+app.listen(port, '0.0.0.0', () => {
+  console.log('[gateway] http://127.0.0.1:' + port + ' (and http://localhost:' + port + ')');
+});

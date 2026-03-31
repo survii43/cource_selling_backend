@@ -13,9 +13,22 @@ const app = express();
 const port = Number(process.env.PORT) || 3001;
 const serviceName = process.env.SERVICE_NAME || 'auth';
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 204,
+    maxAge: 86400,
+  }),
+);
 app.use(compression());
-app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req, res) => {
@@ -37,8 +50,17 @@ app.use((_req, res) => {
 });
 
 app.use((err, _req, res, _next) => {
+  // Client closed the connection before the JSON body finished (browser tab, cancelled fetch, etc.)
+  if (err && (err.type === 'request.aborted' || err.code === 'ECONNABORTED')) {
+    if (!res.headersSent) {
+      res.status(400).end();
+    }
+    return;
+  }
   console.error(err);
-  res.status(500).json({ error: 'Internal error' });
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal error' });
+  }
 });
 
 async function main() {

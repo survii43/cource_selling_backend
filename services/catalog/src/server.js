@@ -37,8 +37,16 @@ app.use((_req, res) => {
 });
 
 app.use((err, _req, res, _next) => {
+  if (err && (err.type === 'request.aborted' || err.code === 'ECONNABORTED')) {
+    if (!res.headersSent) {
+      res.status(400).end();
+    }
+    return;
+  }
   console.error(err);
-  res.status(500).json({ error: 'Internal error' });
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal error' });
+  }
 });
 
 async function main() {

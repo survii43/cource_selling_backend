@@ -94,6 +94,29 @@ function router() {
     return res.json({ id: u.id, email: u.email, role: u.role });
   });
 
+  r.post('/logout', async (req, res) => {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    let payload;
+    try {
+      payload = verifyAccessToken(auth.slice(7));
+    } catch {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    const [rows] = await pool().query('SELECT id, token_version FROM users WHERE id = ?', [payload.sub]);
+    if (!rows.length) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const u = rows[0];
+    if (u.token_version !== payload.tv) {
+      return res.status(401).json({ error: 'Session invalidated' });
+    }
+    await pool().query('UPDATE users SET token_version = token_version + 1 WHERE id = ?', [u.id]);
+    return res.status(204).send();
+  });
+
   r.get('/internal/verify', async (req, res) => {
     const auth = req.headers.authorization;
     if (!auth?.startsWith('Bearer ')) {

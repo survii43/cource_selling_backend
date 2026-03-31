@@ -10,6 +10,8 @@ function createPool() {
     waitForConnections: true,
     connectionLimit: 10,
     enableKeepAlive: true,
+    // Fail fast instead of hanging curl/browser when MySQL is down or wrong port.
+    connectTimeout: Number(process.env.MYSQL_CONNECT_TIMEOUT_MS) || 10_000,
   });
 }
 let _pool;
